@@ -13,7 +13,7 @@ dist/
 # Database
 *.db
 *.db-journal
-prisma/migrations/
+# prisma/migrations/ - 不忽略,让团队共享 migrations
 
 # Logs
 logs/
