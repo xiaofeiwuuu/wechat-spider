@@ -29,11 +29,22 @@ cd wechat-spider-node
 # 2. 安装 pnpm (如果未安装)
 npm install -g pnpm
 
-# 3. 一键初始化并启动
-pnpm setup && pnpm dev
+# 3. 安装依赖
+pnpm install
+
+# 4. 一键初始化数据库
+pnpm setup
+
+# 5. 启动交互式菜单
+pnpm dev
 ```
 
 就这么简单! 🎉
+
+> **⚠️ 重要提示:** 首次运行必须先执行 `pnpm install` 和 `pnpm setup`,这会:
+> - 安装项目依赖
+> - 生成 Prisma Client (解决 `PrismaClient` 导出错误)
+> - 初始化 SQLite 数据库
 
 **支持系统:** ✅ Windows | ✅ macOS (已测试) | ✅ Linux
 
