@@ -35,6 +35,9 @@ importers:
       dayjs:
         specifier: ^1.11.19
         version: 1.11.19
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.6.1
       electron-updater:
         specifier: ^6.3.9
         version: 6.6.2

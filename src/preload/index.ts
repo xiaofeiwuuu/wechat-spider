@@ -131,6 +131,13 @@ const api = {
   // 主题 API
   theme: {
     setNativeTheme: (theme: 'dark' | 'light') => ipcRenderer.send('theme:change', theme)
+  },
+
+  // 文件操作 API
+  file: {
+    downloadImages: (imageUrls: string[], articleTitle: string) =>
+      ipcRenderer.invoke('file:downloadImages', imageUrls, articleTitle),
+    showInFolder: (folderPath: string) => ipcRenderer.invoke('file:showInFolder', folderPath)
   }
 }
 

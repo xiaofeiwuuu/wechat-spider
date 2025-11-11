@@ -595,4 +595,22 @@ async function saveSchedulerSettings(): Promise<void> {
 .settings :deep(.el-form-item__label) {
   color: var(--color-text-primary);
 }
+
+/* 深色主题下 Tag 为绿色 */
+[data-theme='dark'] .settings {
+  :deep(.el-tag) {
+    background-color: #00ff32 !important;
+    border-color: #00ff32 !important;
+    color: #1a1a1a !important;
+  }
+}
+
+/* 浅色主题下 Tag 为蓝色 */
+[data-theme='light'] .settings {
+  :deep(.el-tag) {
+    background-color: #ecf5ff !important;
+    border-color: #d9ecff !important;
+    color: #409eff !important;
+  }
+}
 </style>

@@ -7,6 +7,7 @@ import { registerScraperHandlers } from './scraper'
 import { registerDashboardHandlers } from './dashboard'
 import { registerSchedulerHandlers, initScheduler } from './scheduler'
 import { registerTagHandlers } from './tag'
+import './file' // 导入文件相关 IPC handlers
 
 /**
  * 注册所有 IPC 处理器

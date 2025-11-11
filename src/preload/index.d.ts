@@ -225,6 +225,21 @@ interface API {
   theme: {
     setNativeTheme: (theme: 'dark' | 'light') => void
   }
+  file: {
+    downloadImages: (
+      imageUrls: string[],
+      articleTitle: string
+    ) => Promise<
+      ApiResponse<{
+        total: number
+        success: number
+        failed: number
+        folder: string
+        results: Array<{ url: string; success: boolean; path?: string; error?: string }>
+      }>
+    >
+    showInFolder: (folderPath: string) => Promise<ApiResponse<void>>
+  }
 }
 
 declare global {

@@ -5,31 +5,31 @@
       <el-card class="stat-card">
         <div class="stat-content">
           <div class="stat-label">总任务数</div>
-          <div class="stat-value">{{ stats.totalTasks }}</div>
+          <div class="stat-value stat-total">{{ stats.totalTasks }}</div>
         </div>
       </el-card>
       <el-card class="stat-card success">
         <div class="stat-content">
           <div class="stat-label">成功任务</div>
-          <div class="stat-value">{{ stats.completedTasks }}</div>
+          <div class="stat-value stat-success">{{ stats.completedTasks }}</div>
         </div>
       </el-card>
       <el-card class="stat-card fail">
         <div class="stat-content">
           <div class="stat-label">失败任务</div>
-          <div class="stat-value">{{ stats.failedTasks }}</div>
+          <div class="stat-value stat-fail">{{ stats.failedTasks }}</div>
         </div>
       </el-card>
       <el-card class="stat-card cancel">
         <div class="stat-content">
           <div class="stat-label">取消任务</div>
-          <div class="stat-value">{{ stats.cancelledTasks }}</div>
+          <div class="stat-value stat-cancel">{{ stats.cancelledTasks }}</div>
         </div>
       </el-card>
       <el-card class="stat-card rate">
         <div class="stat-content">
           <div class="stat-label">成功率</div>
-          <div class="stat-value">{{ stats.successRate }}%</div>
+          <div class="stat-value stat-rate">{{ stats.successRate }}%</div>
         </div>
       </el-card>
     </div>
@@ -275,14 +275,34 @@ onMounted(() => {
 .stat-content {
   .stat-label {
     font-size: 14px;
-    color: #909399;
+    color: var(--color-text-secondary);
     margin-bottom: 8px;
   }
 
   .stat-value {
     font-size: 28px;
     font-weight: bold;
-    color: #303133;
+  }
+
+  // 使用主题配置的统计颜色
+  .stat-total {
+    color: var(--color-stat-accounts); // 使用蓝色
+  }
+
+  .stat-success {
+    color: var(--color-stat-articles); // 使用绿色
+  }
+
+  .stat-fail {
+    color: var(--color-stat-today); // 使用红色
+  }
+
+  .stat-cancel {
+    color: var(--color-stat-month); // 使用橙色
+  }
+
+  .stat-rate {
+    color: var(--color-stat-accounts); // 使用蓝色
   }
 }
 

@@ -183,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, nextTick, onMounted } from 'vue'
+import { reactive, ref, nextTick, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useScraperStore } from '../stores/scraper'
 import { scraperEventsManager } from '../services/scraperEvents'
@@ -475,6 +475,18 @@ const loadAccounts = async (): Promise<void> => {
     loadingAccounts.value = false
   }
 }
+
+// 监听 logs 变化,自动滚动到底部
+watch(
+  () => scraperStore.logs.length,
+  () => {
+    nextTick(() => {
+      if (logContainer.value) {
+        logContainer.value.scrollTop = logContainer.value.scrollHeight
+      }
+    })
+  }
+)
 
 // 组件挂载时加载公众号列表和默认设置
 // 注意:IPC 事件监听器已经在 App.vue 中全局注册,这里不需要再注册

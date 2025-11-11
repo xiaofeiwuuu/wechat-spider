@@ -534,6 +534,60 @@ export class ScraperService {
             const parsed = parseArticleContent(html)
             console.log(`[ScraperService] 解析完成,内容长度: ${parsed.markdown.length} 字符`)
 
+            // 检查存储配置,决定是否下载图片到本地
+            const storageConfig = await prisma.config.findUnique({ where: { key: 'storage' } })
+            const config = storageConfig
+              ? (JSON.parse(storageConfig.value) as { mode: string; path: string })
+              : null
+            const shouldDownloadImages =
+              config && (config.mode === 'local' || config.mode === 'both') && config.path
+
+            // 如果需要下载图片到本地
+            if (shouldDownloadImages && parsed.images.length > 0) {
+              onLog?.('info', `  下载 ${parsed.images.length} 张图片到本地...`)
+              try {
+                // 创建文章文件夹
+                const safeFolderName = article.title
+                  .replace(/[/\\?%*:|"<>]/g, '-')
+                  .substring(0, 50)
+                const articleFolder = path.join(config!.path, safeFolderName)
+
+                if (!fs.existsSync(articleFolder)) {
+                  fs.mkdirSync(articleFolder, { recursive: true })
+                }
+
+                // 下载所有图片
+                let downloadedCount = 0
+                for (let imgIndex = 0; imgIndex < parsed.images.length; imgIndex++) {
+                  const imgUrl = parsed.images[imgIndex]
+                  try {
+                    const urlObj = new URL(imgUrl)
+                    const ext = path.extname(urlObj.pathname) || '.jpg'
+                    const fileName = `image-${imgIndex + 1}${ext}`
+                    const filePath = path.join(articleFolder, fileName)
+
+                    const response = await axios.get(imgUrl, {
+                      responseType: 'arraybuffer',
+                      timeout: 30000,
+                      headers: {
+                        'User-Agent':
+                          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+                      }
+                    })
+
+                    fs.writeFileSync(filePath, Buffer.from(response.data))
+                    downloadedCount++
+                  } catch (imgError) {
+                    console.error(`下载图片失败: ${imgUrl}`, imgError)
+                  }
+                }
+                onLog?.('success', `  ✓ 已下载 ${downloadedCount}/${parsed.images.length} 张图片`)
+              } catch (downloadError) {
+                console.error('下载图片到本地失败:', downloadError)
+                onLog?.('warning', `  下载图片失败: ${downloadError}`)
+              }
+            }
+
             // 保存到数据库
             await prisma.article.create({
               data: {
