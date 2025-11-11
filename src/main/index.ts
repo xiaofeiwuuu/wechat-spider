@@ -1,31 +1,23 @@
 import { app, shell, BrowserWindow, ipcMain, nativeTheme } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer } from '@electron-toolkit/utils'
+import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerAllIPC, initializeScheduler } from './ipc'
-import path from 'path'
-import fs from 'fs'
+import { DatabaseInitService } from './services/DatabaseInitService'
 
 let mainWindow: BrowserWindow | null = null
 
 /**
  * 初始化数据库
- * 确保数据库目录存在
+ * 自动检测数据库是否存在,不存在则创建表结构
  */
 async function initDatabase(): Promise<void> {
   try {
-    const userDataPath = app.getPath('userData')
-    const dbDir = path.join(userDataPath, 'data')
-    const dbPath = path.join(dbDir, 'wechat.db')
-
-    // 确保目录存在
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true })
-    }
-
-    console.log('数据库路径:', dbPath)
+    const dbInitService = new DatabaseInitService()
+    await dbInitService.initialize()
   } catch (error) {
     console.error('数据库初始化失败:', error)
+    throw error
   }
 }
 
@@ -56,8 +48,7 @@ function createWindow(): void {
   })
 
   // 开发环境加载远程 URL,生产环境加载本地 HTML 文件
-  const isDev = !app.isPackaged
-  if (isDev && process.env['ELECTRON_RENDERER_URL']) {
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))

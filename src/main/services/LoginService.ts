@@ -3,6 +3,7 @@ import { chromium } from 'playwright'
 import { PrismaClient } from '@prisma/client'
 import path from 'path'
 import fs from 'fs'
+import { is } from '@electron-toolkit/utils'
 
 interface LoginData {
   token: string
@@ -18,9 +19,20 @@ interface LoginData {
 
 // 获取数据库路径(延迟初始化)
 function getDbPath(): string {
-  const userDataPath = app.getPath('userData')
-  const dbDir = path.join(userDataPath, 'data')
-  const dbPath = path.join(dbDir, 'wechat.db')
+  let dbDir: string
+  let dbPath: string
+
+  if (is.dev) {
+    // 开发环境: 使用项目根目录下的 data 文件夹
+    const projectRoot = path.resolve(__dirname, '../..')
+    dbDir = path.join(projectRoot, 'data')
+    dbPath = path.join(dbDir, 'wechat.db')
+  } else {
+    // 生产环境(打包后): 使用系统应用数据目录
+    const userDataPath = app.getPath('userData')
+    dbDir = path.join(userDataPath, 'data')
+    dbPath = path.join(dbDir, 'wechat.db')
+  }
 
   // 确保数据库目录存在
   if (!fs.existsSync(dbDir)) {
@@ -36,8 +48,6 @@ let prismaInstance: PrismaClient | null = null
 function getPrisma(): PrismaClient {
   if (!prismaInstance) {
     const dbPath = getDbPath()
-    console.log('初始化 Prisma Client,数据库路径:', dbPath)
-
     prismaInstance = new PrismaClient({
       log: ['error', 'warn'],
       datasources: {
@@ -193,8 +203,6 @@ export class LoginService {
                 userName: cgiData.user_name || windowAny.wx?.user_name || ''
               }
             })
-
-            console.log('获取到的用户信息:', JSON.stringify(userInfo, null, 2))
 
             // 保存到数据库
             const prisma = getPrisma()

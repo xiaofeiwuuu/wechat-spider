@@ -43,12 +43,6 @@ export function registerConfigHandlers(): void {
     'config:set',
     async (_event, key: string, value: unknown, description?: string) => {
       try {
-        console.log('[Config IPC] 保存配置请求:')
-        console.log('[Config IPC]   - key:', key)
-        console.log('[Config IPC]   - value type:', typeof value)
-        console.log('[Config IPC]   - value:', JSON.stringify(value, null, 2))
-        console.log('[Config IPC]   - description:', description)
-
         // 检查 value 是否包含不可序列化的对象
         const checkForNonSerializable = (obj: unknown, path = 'root'): void => {
           if (obj === null || obj === undefined) return
@@ -69,8 +63,6 @@ export function registerConfigHandlers(): void {
         checkForNonSerializable(value)
 
         const jsonString = JSON.stringify(value)
-        console.log('[Config IPC] JSON 序列化成功, 长度:', jsonString.length)
-
         const config = await prisma.config.upsert({
           where: { key },
           update: {
@@ -83,11 +75,7 @@ export function registerConfigHandlers(): void {
             description: description || undefined
           }
         })
-
-        console.log('[Config IPC] ✅ 配置已保存到数据库')
         const result = JSON.parse(config.value)
-        console.log('[Config IPC] 返回结果:', typeof result)
-
         return result
       } catch (error) {
         console.error('[Config IPC] ❌ 保存配置失败:', error)

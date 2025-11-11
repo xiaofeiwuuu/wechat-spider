@@ -5,6 +5,7 @@ import fs from 'fs'
 import axios from 'axios'
 import * as cheerio from 'cheerio'
 import TurndownService from 'turndown'
+import { is } from '@electron-toolkit/utils'
 
 interface ScraperOptions {
   maxPages?: number
@@ -37,9 +38,20 @@ interface ScrapeResult {
 
 // 获取数据库路径
 function getDbPath(): string {
-  const userDataPath = app.getPath('userData')
-  const dbDir = path.join(userDataPath, 'data')
-  const dbPath = path.join(dbDir, 'wechat.db')
+  let dbDir: string
+  let dbPath: string
+
+  if (is.dev) {
+    // 开发环境: 使用项目根目录下的 data 文件夹
+    const projectRoot = path.resolve(__dirname, '../..')
+    dbDir = path.join(projectRoot, 'data')
+    dbPath = path.join(dbDir, 'wechat.db')
+  } else {
+    // 生产环境(打包后): 使用系统应用数据目录
+    const userDataPath = app.getPath('userData')
+    dbDir = path.join(userDataPath, 'data')
+    dbPath = path.join(dbDir, 'wechat.db')
+  }
 
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true })
@@ -100,8 +112,6 @@ async function searchAccount(
   const url = 'https://mp.weixin.qq.com/cgi-bin/searchbiz'
 
   try {
-    console.log('[API] searchAccount 请求:', { url, query, hasToken: !!token, hasCookie: !!cookie })
-
     const response = await axios.get(url, {
       headers: { cookie },
       params: {
@@ -118,8 +128,6 @@ async function searchAccount(
     })
 
     const data = response.data
-    console.log('[API] searchAccount 响应状态:', response.status)
-    console.log('[API] searchAccount 响应数据:', JSON.stringify(data).slice(0, 200))
 
     if (!data.list || data.list.length === 0) {
       console.warn('[API] 未找到公众号:', query)
@@ -130,7 +138,6 @@ async function searchAccount(
       wpub_name: item.nickname,
       wpub_fakid: item.fakeid
     }))
-    console.log('[API] searchAccount 返回:', accounts.length, '个公众号')
     return accounts
   } catch (error) {
     console.error('[API] searchAccount 失败:', error)
@@ -161,8 +168,6 @@ async function getArticlesList(
   const url = 'https://mp.weixin.qq.com/cgi-bin/appmsg'
 
   try {
-    console.log(`[API] getArticlesList 请求: fakeid=${fakeid}, begin=${begin}`)
-
     const response = await axios.get(url, {
       headers: { cookie },
       params: {
@@ -181,12 +186,8 @@ async function getArticlesList(
 
     const data = response.data
 
-    console.log(`[API] getArticlesList 响应状态: ${response.status}`)
-    console.log(`[API] 响应数据结构:`, Object.keys(data))
-
     // 检查错误信息
     if (data.base_resp) {
-      console.log('[API] base_resp:', data.base_resp)
       if (data.base_resp.ret !== 0) {
         console.error(
           `[API] 微信 API 返回错误: ret=${data.base_resp.ret}, err_msg=${data.base_resp.err_msg}`
@@ -196,12 +197,9 @@ async function getArticlesList(
     }
 
     if (!data.app_msg_list) {
-      console.warn('[API] 响应中没有 app_msg_list 字段')
-      console.log('[API] 完整响应:', JSON.stringify(data).slice(0, 500))
       return []
     }
 
-    console.log(`[API] getArticlesList 成功获取 ${data.app_msg_list.length} 篇文章`)
     return data.app_msg_list
   } catch (error) {
     console.error('[API] getArticlesList 失败:', error)
@@ -218,8 +216,6 @@ async function getArticlesList(
  */
 async function getArticleContent(url: string, cookie: string): Promise<string> {
   try {
-    console.log('[API] getArticleContent 请求:', url.slice(0, 100))
-
     const response = await axios.get(url, {
       headers: {
         cookie,
@@ -227,9 +223,6 @@ async function getArticleContent(url: string, cookie: string): Promise<string> {
       }
     })
 
-    console.log(
-      `[API] getArticleContent 响应状态: ${response.status}, 内容长度: ${response.data?.length || 0}`
-    )
     return response.data
   } catch (error) {
     console.error('[API] getArticleContent 失败:', error)
@@ -302,7 +295,6 @@ export class ScraperService {
    * 停止爬取
    */
   stop(): void {
-    console.log('[ScraperService] 收到停止信号,设置 shouldStop=true')
     this.shouldStop = true
   }
 
@@ -354,15 +346,8 @@ export class ScraperService {
 
       // 2. 搜索公众号
       onLog?.('info', '搜索公众号...')
-      console.log('[ScraperService] 调用 searchAccount API:', {
-        accountName,
-        hasToken: !!token,
-        hasCookie: !!cookie
-      })
 
       const accounts = await searchAccount(token, cookie, accountName)
-      console.log('[ScraperService] searchAccount 返回结果:', accounts.length, '个公众号')
-
       if (accounts.length === 0) {
         console.error('[ScraperService] 未找到公众号:', accountName)
         onLog?.('error', `未找到公众号: ${accountName}`)
@@ -370,7 +355,6 @@ export class ScraperService {
       }
 
       const account = accounts[0]
-      console.log('[ScraperService] 找到公众号:', account.wpub_name, 'fakeid:', account.wpub_fakid)
       onLog?.('success', `✓ 找到公众号: ${account.wpub_name}`)
 
       // 3. 保存公众号到数据库(如果不存在)
@@ -416,18 +400,13 @@ export class ScraperService {
       for (let page = 0; page < maxPages; page++) {
         // 检查是否需要停止
         if (this.shouldStop) {
-          console.log('[ScraperService] 用户已停止爬取,shouldStop=true')
           onLog?.('warning', '用户已停止爬取')
           break
         }
 
         const begin = page * 5
-        console.log(
-          `[ScraperService] 请求第 ${page + 1} 页文章列表, begin=${begin}, fakeid=${account.wpub_fakid}`
-        )
 
         const articleList = await getArticlesList(token, cookie, account.wpub_fakid, begin)
-        console.log(`[ScraperService] 第 ${page + 1} 页返回:`, articleList.length, '篇文章')
 
         if (articleList.length === 0) {
           if (page === 0) {
@@ -439,7 +418,6 @@ export class ScraperService {
             )
             onLog?.('info', '建议: 请重新登录后重试。若仍未获取到数据,请稍后(一小时后)再试。')
           } else {
-            console.log('[ScraperService] 没有更多文章了')
             onLog?.('info', '没有更多文章了')
           }
           break
@@ -522,7 +500,6 @@ export class ScraperService {
           onLog?.('info', `[${i + 1}/${articles.length}] ${article.title}`)
 
           try {
-            console.log(`[ScraperService] 获取文章内容: ${article.title}`)
             const html = await getArticleContent(article.url, cookie)
 
             if (!html) {
@@ -532,7 +509,6 @@ export class ScraperService {
             }
 
             const parsed = parseArticleContent(html)
-            console.log(`[ScraperService] 解析完成,内容长度: ${parsed.markdown.length} 字符`)
 
             // 检查存储配置,决定是否下载图片到本地
             const storageConfig = await prisma.config.findUnique({ where: { key: 'storage' } })
@@ -598,7 +574,6 @@ export class ScraperService {
                 publishTime: article.publishTime
               }
             })
-            console.log(`[ScraperService] 文章已保存到数据库: ${article.title}`)
 
             onLog?.('success', `✓ 保存成功`)
 
@@ -610,7 +585,6 @@ export class ScraperService {
 
               for (let j = 0; j < iterations; j++) {
                 if (this.shouldStop) {
-                  console.log('[ScraperService] 等待期间收到停止信号')
                   break
                 }
                 await new Promise((resolve) => setTimeout(resolve, checkInterval))
@@ -663,8 +637,6 @@ export class ScraperService {
     onProgress?: ProgressCallback
   ): Promise<{ success: boolean; results: ScrapeResult[] }> {
     // 在批量爬取开始时重置停止标志
-    console.log('[ScraperService] 开始批量爬取,公众号数量:', accountNames.length)
-    console.log('[ScraperService] 爬取选项:', options)
     this.resetStopFlag()
 
     const results: ScrapeResult[] = []
@@ -672,17 +644,14 @@ export class ScraperService {
     for (let i = 0; i < accountNames.length; i++) {
       // 检查是否需要停止
       if (this.shouldStop) {
-        console.log('[ScraperService] 批量爬取被停止,shouldStop=true')
         onLog?.('warning', '用户已停止批量爬取')
         break
       }
 
       const name = accountNames[i]
-      console.log(`[ScraperService] 开始爬取第 ${i + 1}/${accountNames.length} 个公众号: ${name}`)
       onProgress?.(i, accountNames.length)
 
       const result = await this.scrapeAccount(name, options, onLog, onProgress)
-      console.log(`[ScraperService] 公众号 ${name} 爬取完成:`, result)
       results.push({
         name,
         success: result.success,
@@ -693,7 +662,6 @@ export class ScraperService {
       onProgress?.(i + 1, accountNames.length)
     }
 
-    console.log('[ScraperService] 批量爬取全部完成,结果:', results)
     return { success: true, results }
   }
 }

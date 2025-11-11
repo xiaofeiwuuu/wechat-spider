@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, shell } from 'electron'
 import axios from 'axios'
 import fs from 'fs'
 import path from 'path'
@@ -11,7 +11,9 @@ ipcMain.handle('file:downloadImages', async (_event, imageUrls: string[], articl
   try {
     // 获取存储配置
     const config = await prisma.config.findUnique({ where: { key: 'storage' } })
-    const storageConfig = config ? (JSON.parse(config.value) as { mode: string; path: string }) : null
+    const storageConfig = config
+      ? (JSON.parse(config.value) as { mode: string; path: string })
+      : null
     const downloadPath = storageConfig?.path || ''
 
     if (!downloadPath) {
@@ -92,7 +94,6 @@ ipcMain.handle('file:downloadImages', async (_event, imageUrls: string[], articl
  */
 ipcMain.handle('file:showInFolder', async (_event, folderPath: string) => {
   try {
-    const { shell } = require('electron')
     await shell.openPath(folderPath)
     return { success: true }
   } catch (error: unknown) {

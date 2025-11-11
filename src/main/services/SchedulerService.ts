@@ -44,7 +44,6 @@ export class SchedulerService {
       await this.loadConfig()
 
       if (!this.config || !this.config.enabled) {
-        console.log('[Scheduler] 定时任务未启用')
         return
       }
 
@@ -57,8 +56,6 @@ export class SchedulerService {
       } else {
         this.startFixedMode()
       }
-
-      console.log('[Scheduler] 定时任务已启动')
     } catch (error) {
       console.error(`[Scheduler] 启动失败: ${error}`)
       throw error
@@ -72,7 +69,6 @@ export class SchedulerService {
     if (this.timer) {
       clearTimeout(this.timer)
       this.timer = null
-      console.log('[Scheduler] 定时任务已停止')
     }
     if (this.countdownTimer) {
       clearTimeout(this.countdownTimer)
@@ -88,7 +84,6 @@ export class SchedulerService {
    * 取消本次任务
    */
   cancelCurrentTask(): void {
-    console.log('[Scheduler] 用户取消本次任务')
     this.shouldCancelTask = true
     if (this.countdownTimer) {
       clearTimeout(this.countdownTimer)
@@ -156,8 +151,6 @@ export class SchedulerService {
 
     // 首次执行延迟一个间隔
     this.timer = setTimeout(runTask, intervalMs)
-
-    console.log(`[Scheduler] 间隔执行模式已启动: 每 ${intervalValue} ${intervalUnit} 执行一次`)
   }
 
   /**
@@ -172,8 +165,6 @@ export class SchedulerService {
 
       const now = new Date()
       const delay = nextRunTime.getTime() - now.getTime()
-
-      console.log(`[Scheduler] 下次执行时间: ${nextRunTime.toLocaleString('zh-CN')}`)
 
       this.timer = setTimeout(async () => {
         try {
@@ -273,9 +264,6 @@ export class SchedulerService {
       }
     })
     this.currentLogId = schedulerLog.id
-    console.log(`[Scheduler] 创建任务日志记录: ${this.currentLogId}`)
-
-    console.log('[Scheduler] 任务将在30秒后执行,发送倒计时通知')
 
     // 发送倒计时开始事件到前端
     this.mainWindow.webContents.send('scheduler:countdown', {
@@ -312,7 +300,6 @@ export class SchedulerService {
 
     // 检查是否被取消
     if (this.shouldCancelTask) {
-      console.log('[Scheduler] 任务已被用户取消')
       this.shouldCancelTask = false
       this.mainWindow.webContents.send('scheduler:cancelled')
 
@@ -373,7 +360,6 @@ export class SchedulerService {
 
     try {
       this.isRunning = true
-      console.log('[Scheduler] 开始执行定时任务')
 
       // 获取要爬取的公众号列表
       const accountNames = this.config?.accountNames || []
@@ -443,7 +429,6 @@ export class SchedulerService {
 
       // 日志和进度回调
       const onLog = (type: 'info' | 'success' | 'warning' | 'error', message: string): void => {
-        console.log(`[Scheduler Task] [${type}] ${message}`)
         this.mainWindow.webContents.send('scraper:log', {
           type,
           message: `[Scheduler Task] [${type}] ${message}`
@@ -464,9 +449,6 @@ export class SchedulerService {
 
       // 发送完成事件
       this.mainWindow.webContents.send('scraper:complete', result)
-
-      console.log('[Scheduler] 定时任务执行完成')
-      console.log(`[Scheduler] 执行结果: ${JSON.stringify(result)}`)
 
       // 计算统计信息
       const successCount = result.results?.filter((r) => r.success).length || 0

@@ -92,22 +92,28 @@
       </template>
       <div v-if="currentArticle" class="article-detail">
         <div class="article-content">
+          <!-- eslint-disable-next-line vue/no-v-html -->
           <div
             v-if="currentArticle.content"
             class="article-body"
             v-html="processArticleContent(currentArticle.content)"
           ></div>
           <el-empty v-else description="暂无内容">
-            <el-button type="primary" @click="openInBrowser">
-              在浏览器中查看
-            </el-button>
+            <el-button type="primary" @click="openInBrowser"> 在浏览器中查看 </el-button>
           </el-empty>
 
           <!-- 文章底部信息 -->
           <div v-if="currentArticle.content" class="article-footer">
             <div class="article-info">
-              <span class="publish-time">发布时间: {{ formatDate(currentArticle.publishTime) }}</span>
-              <el-link :href="currentArticle.url" target="_blank" type="primary" class="original-link">
+              <span class="publish-time"
+                >发布时间: {{ formatDate(currentArticle.publishTime) }}</span
+              >
+              <el-link
+                :href="currentArticle.url"
+                target="_blank"
+                type="primary"
+                class="original-link"
+              >
                 查看原文
               </el-link>
             </div>
@@ -667,5 +673,4 @@ onMounted(async () => {
   font-size: 14px;
   font-weight: 500;
 }
-
 </style>

@@ -15,14 +15,11 @@ export function registerSchedulerHandlers(mainWindow: BrowserWindow): void {
 
   // 启动调度器
   ipcMain.handle('scheduler:start', async () => {
-    console.log('[Scheduler IPC] 收到启动调度器请求')
     try {
       await schedulerService?.start()
-      console.log('[Scheduler IPC] ✅ 调度器启动成功')
       return { success: true }
     } catch (error) {
       console.error('[Scheduler IPC] ❌ scheduler:start 失败:', error)
-      console.error('[Scheduler IPC] 错误堆栈:', error instanceof Error ? error.stack : '无')
       const message = error instanceof Error ? error.message : String(error)
       return { success: false, error: message }
     }
@@ -30,14 +27,11 @@ export function registerSchedulerHandlers(mainWindow: BrowserWindow): void {
 
   // 停止调度器
   ipcMain.handle('scheduler:stop', async () => {
-    console.log('[Scheduler IPC] 收到停止调度器请求')
     try {
       schedulerService?.stop()
-      console.log('[Scheduler IPC] ✅ 调度器停止成功')
       return { success: true }
     } catch (error) {
       console.error('[Scheduler IPC] ❌ scheduler:stop 失败:', error)
-      console.error('[Scheduler IPC] 错误堆栈:', error instanceof Error ? error.stack : '无')
       const message = error instanceof Error ? error.message : String(error)
       return { success: false, error: message }
     }
@@ -45,14 +39,11 @@ export function registerSchedulerHandlers(mainWindow: BrowserWindow): void {
 
   // 启用开机自启动
   ipcMain.handle('scheduler:enableAutoLaunch', async () => {
-    console.log('[Scheduler IPC] 收到启用开机自启动请求')
     try {
       await autoLaunchService.enable()
-      console.log('[Scheduler IPC] ✅ 开机自启动已启用')
       return { success: true }
     } catch (error) {
       console.error('[Scheduler IPC] ❌ scheduler:enableAutoLaunch 失败:', error)
-      console.error('[Scheduler IPC] 错误堆栈:', error instanceof Error ? error.stack : '无')
       const message = error instanceof Error ? error.message : String(error)
       return { success: false, error: message }
     }
@@ -60,14 +51,11 @@ export function registerSchedulerHandlers(mainWindow: BrowserWindow): void {
 
   // 禁用开机自启动
   ipcMain.handle('scheduler:disableAutoLaunch', async () => {
-    console.log('[Scheduler IPC] 收到禁用开机自启动请求')
     try {
       await autoLaunchService.disable()
-      console.log('[Scheduler IPC] ✅ 开机自启动已禁用')
       return { success: true }
     } catch (error) {
       console.error('[Scheduler IPC] ❌ scheduler:disableAutoLaunch 失败:', error)
-      console.error('[Scheduler IPC] 错误堆栈:', error instanceof Error ? error.stack : '无')
       const message = error instanceof Error ? error.message : String(error)
       return { success: false, error: message }
     }
@@ -87,10 +75,8 @@ export function registerSchedulerHandlers(mainWindow: BrowserWindow): void {
 
   // 取消本次任务
   ipcMain.handle('scheduler:cancelTask', async () => {
-    console.log('[Scheduler IPC] 收到取消本次任务请求')
     try {
       schedulerService?.cancelCurrentTask()
-      console.log('[Scheduler IPC] ✅ 已取消本次任务')
       return { success: true }
     } catch (error) {
       console.error('[Scheduler IPC] ❌ scheduler:cancelTask 失败:', error)

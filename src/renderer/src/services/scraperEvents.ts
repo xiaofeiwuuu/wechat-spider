@@ -146,16 +146,13 @@ class ScraperEventsManager {
 
     // 监听定时任务倒计时
     window.api.scheduler.onCountdown((data) => {
-      console.log('[ScraperEvents] 收到倒计时事件:', data)
       const { countdown, accountNames } = data
 
       if (countdown === 30) {
         // 首次倒计时,显示对话框
-        console.log('[ScraperEvents] 显示倒计时对话框')
         this.showCountdownDialog(countdown, accountNames)
       } else {
         // 更新对话框内容
-        console.log('[ScraperEvents] 更新倒计时:', countdown)
         this.updateCountdownDialog(countdown, accountNames)
       }
     })
@@ -186,15 +183,12 @@ class ScraperEventsManager {
     })
 
     this.initialized = true
-    console.log('[ScraperEvents] 全局爬虫事件监听器初始化完成')
   }
 
   /**
    * 显示倒计时通知(右上角)
    */
   private showCountdownDialog(countdown: number, accountNames: string[]): void {
-    console.log('[ScraperEvents] showCountdownDialog 被调用, countdown=', countdown)
-
     // 创建右上角通知,并保存实例
     this.countdownMessageBox = ElNotification({
       title: '定时任务即将开始',
@@ -214,7 +208,6 @@ class ScraperEventsManager {
               style:
                 'flex: 1; padding: 6px 15px; border: 1px solid #dcdfe6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;',
               onClick: async () => {
-                console.log('[ScraperEvents] 用户点击"取消本次"')
                 await window.api.scheduler.cancelTask()
                 if (this.countdownMessageBox) {
                   this.countdownMessageBox.close()
@@ -230,7 +223,6 @@ class ScraperEventsManager {
               style:
                 'flex: 1; padding: 6px 15px; border: 1px solid #dcdfe6; border-radius: 4px; background: white; cursor: pointer; font-size: 12px;',
               onClick: async () => {
-                console.log('[ScraperEvents] 用户点击"关闭定时任务"')
                 await window.api.scheduler.stop()
                 await window.api.scheduler.cancelTask()
                 if (this.countdownMessageBox) {
@@ -255,8 +247,6 @@ class ScraperEventsManager {
       position: 'top-right',
       showClose: true
     })
-
-    console.log('[ScraperEvents] ElNotification 已显示')
   }
 
   /**

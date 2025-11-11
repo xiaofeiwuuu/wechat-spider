@@ -22,7 +22,6 @@ export class AutoLaunchService {
       const isEnabled = await this.autoLauncher.isEnabled()
       if (!isEnabled) {
         await this.autoLauncher.enable()
-        console.log('[AutoLaunch] 开机自启动已启用')
       }
     } catch (error) {
       console.error(`[AutoLaunch] 启用开机自启动失败: ${error}`)
@@ -38,7 +37,6 @@ export class AutoLaunchService {
       const isEnabled = await this.autoLauncher.isEnabled()
       if (isEnabled) {
         await this.autoLauncher.disable()
-        console.log('[AutoLaunch] 开机自启动已禁用')
       }
     } catch (error) {
       console.error(`[AutoLaunch] 禁用开机自启动失败: ${error}`)
