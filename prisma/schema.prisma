@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 登录用户表 - 存储登录微信公众平台的用户信息
+model User {
+  id        String   @id @default(cuid())
+  uin       String   @unique // 微信用户 ID
+  userName  String   // 公众号用户名 (如: gh_475416747926)
+  nickName  String   // 公众号昵称 (如: 无忧头像壁纸集)
+  avatar    String?  // 头像 URL
+  token     String   // 登录 token
+  cookie    String   // 登录 cookie
+  isActive  Boolean  @default(false) // 当前激活的用户
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  expiresAt DateTime // token 过期时间
+
+  @@index([isActive])
+}
+
+// 公众号账号表 - 存储要抓取的公众号列表
+model Account {
+  id           String        @id @default(cuid())
+  name         String        // 公众号名称
+  platform     String        @default("wechat") // 平台类型
+  createdAt    DateTime      @default(now()) // 首次爬取时间
+  articles     Article[]
+  accountTags  AccountTag[]  // 关联到标签
+
+  @@unique([name, platform])
+  @@index([platform])
+}
+
+// 标签表 - 独立的标签实体
+model Tag {
+  id          String        @id @default(cuid())
+  name        String        @unique // 标签名称
+  createdAt   DateTime      @default(now())
+  accountTags AccountTag[]  // 关联到公众号
+
+  @@index([name])
+}
+
+// 公众号-标签关联表 (多对多关系)
+model AccountTag {
+  id        String   @id @default(cuid())
+  accountId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, tagId])
+  @@index([accountId])
+  @@index([tagId])
+}
+
+// 文章表
+model Article {
+  id          String    @id @default(cuid())
+  accountId   String    // 所属公众号 ID
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  title       String    // 文章标题
+  url         String    @unique // 文章 URL
+  publishTime DateTime? // 发布时间
+  content     String?   // 文章内容
+  createdAt   DateTime  @default(now()) // 爬取时间
+
+  @@index([accountId, publishTime])
+}
+
+// 系统配置表 - 存储应用配置
+model Config {
+  id              String   @id @default(cuid())
+  key             String   @unique // 配置键名
+  value           String   // 配置值 (JSON 字符串)
+  description     String?  // 配置描述
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([key])
+}
+
+// 定时任务执行记录表
+model SchedulerLog {
+  id              String   @id @default(cuid())
+  startTime       DateTime @default(now()) // 任务开始时间
+  endTime         DateTime? // 任务结束时间
+  status          String   // 任务状态: pending(进行中), completed(完成), cancelled(取消), failed(失败)
+  accountCount    Int      // 计划爬取的公众号数量
+  accountNames    String   // 公众号名称列表 (JSON 数组字符串)
+  successCount    Int      @default(0) // 成功爬取的公众号数量
+  failCount       Int      @default(0) // 失败的公众号数量
+  totalArticles   Int      @default(0) // 爬取的文章总数
+  errorMessage    String?  // 错误信息
+  duration        Int?     // 执行耗时(秒)
+  createdAt       DateTime @default(now())
+
+  @@index([startTime])
+  @@index([status])
+}
