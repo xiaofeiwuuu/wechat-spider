@@ -234,7 +234,67 @@ async function getArticleContent(url: string, cookie: string): Promise<string> {
 }
 
 /**
+ * 解码 JsDecode 包装的字符串
+ * 微信页面中的数据通过 JsDecode('xxx') 包装，需要解码转义字符
+ */
+function decodeJsString(str: string): string {
+  if (!str) return ''
+  // 处理 \x0a 等转义字符
+  return str.replace(/\\x([0-9a-fA-F]{2})/g, (_, hex) => {
+    return String.fromCharCode(parseInt(hex, 16))
+  })
+}
+
+/**
+ * 从 HTML 中提取图片文章数据 (item_show_type: 8)
+ */
+function parsePictureArticle(html: string): {
+  title: string
+  images: string[]
+  content: string
+} {
+  const images: string[] = []
+  let title = ''
+  let content = ''
+
+  // 提取 item_show_type
+  const showTypeMatch = html.match(/window\.item_show_type\s*=\s*['"]?(\d+)['"]?/)
+  const itemShowType = showTypeMatch ? parseInt(showTypeMatch[1], 10) : 0
+
+  // 只处理图片文章类型 (8)
+  if (itemShowType !== 8) {
+    return { title: '', images: [], content: '' }
+  }
+
+  // 提取标题
+  const titleMatch = html.match(/window\.msg_title\s*=\s*window\.title\s*=\s*'([^']*)'/)
+  if (titleMatch) {
+    title = decodeJsString(titleMatch[1])
+  }
+
+  // 提取 content_noencode (文章描述)
+  const contentMatch = html.match(/content_noencode:\s*JsDecode\('([^']*)'\)/)
+  if (contentMatch) {
+    content = decodeJsString(contentMatch[1])
+  }
+
+  // 提取 picture_page_info_list 中的图片
+  // 匹配所有主图片 URL (https 开头的 cdn_url)
+  const cdnUrlRegex = /cdn_url:\s*JsDecode\('(https:\/\/mmbiz\.qpic\.cn[^']*)'\)/g
+  let match: RegExpExecArray | null
+  while ((match = cdnUrlRegex.exec(html)) !== null) {
+    const url = decodeJsString(match[1])
+    if (url && !images.includes(url)) {
+      images.push(url)
+    }
+  }
+
+  return { title, images, content }
+}
+
+/**
  * HTML 解析器 - 解析文章内容
+ * 支持普通图文文章和图片文章 (item_show_type: 8)
  */
 function parseArticleContent(html: string): {
   content: string
@@ -244,39 +304,70 @@ function parseArticleContent(html: string): {
 } {
   const $ = cheerio.load(html)
 
-  // 提取正文内容
-  const contentEle = $('.rich_media_content')
-
   let htmlContent = ''
   let markdown = ''
   const images: string[] = []
   const videos: string[] = []
 
-  if (contentEle.length > 0) {
-    htmlContent = contentEle.html() || ''
+  // 检测是否为图片文章 (item_show_type: 8)
+  const showTypeMatch = html.match(/window\.item_show_type\s*=\s*['"]?(\d+)['"]?/)
+  const itemShowType = showTypeMatch ? parseInt(showTypeMatch[1], 10) : 0
 
-    // 提取图片链接
-    contentEle.find('img').each((_, el) => {
-      const src = $(el).attr('data-src') || $(el).attr('src')
-      if (src && !images.includes(src)) {
-        images.push(src)
+  if (itemShowType === 8) {
+    // 图片文章类型 - 从 JS 变量中提取数据
+    console.log('[parseArticleContent] 检测到图片文章类型 (item_show_type: 8)')
+
+    const pictureData = parsePictureArticle(html)
+
+    if (pictureData.images.length > 0) {
+      // 生成 Markdown 格式的图片列表
+      const imageMarkdown = pictureData.images
+        .map((url, index) => `![图片${index + 1}](${url})`)
+        .join('\n\n')
+
+      markdown = pictureData.content
+        ? `${pictureData.content.trim()}\n\n${imageMarkdown}`
+        : imageMarkdown
+
+      htmlContent = `<p>${pictureData.content || ''}</p>` + pictureData.images.map((url) => `<img src="${url}" />`).join('')
+
+      images.push(...pictureData.images)
+
+      console.log(`[parseArticleContent] 图片文章解析完成: ${pictureData.images.length} 张图片`)
+    }
+  } else {
+    // 普通图文文章 - 从 DOM 中提取
+    let contentEle = $('#js_content')
+    if (contentEle.length === 0) {
+      contentEle = $('.rich_media_content')
+    }
+
+    if (contentEle.length > 0) {
+      htmlContent = contentEle.html() || ''
+
+      // 提取图片链接
+      contentEle.find('img').each((_, el) => {
+        const src = $(el).attr('data-src') || $(el).attr('src')
+        if (src && !images.includes(src)) {
+          images.push(src)
+        }
+      })
+
+      // 提取视频链接
+      contentEle.find('iframe, video').each((_, el) => {
+        const src = $(el).attr('src') || $(el).attr('data-src')
+        if (src && !videos.includes(src)) {
+          videos.push(src)
+        }
+      })
+
+      // 转换为 Markdown
+      try {
+        markdown = turndownService.turndown(htmlContent)
+      } catch (error) {
+        console.error(`Markdown 转换失败: ${error}`)
+        markdown = htmlContent
       }
-    })
-
-    // 提取视频链接
-    contentEle.find('iframe, video').each((_, el) => {
-      const src = $(el).attr('src') || $(el).attr('data-src')
-      if (src && !videos.includes(src)) {
-        videos.push(src)
-      }
-    })
-
-    // 转换为 Markdown
-    try {
-      markdown = turndownService.turndown(htmlContent)
-    } catch (error) {
-      console.error(`Markdown 转换失败: ${error}`)
-      markdown = htmlContent
     }
   }
 
@@ -508,7 +599,23 @@ export class ScraperService {
               continue
             }
 
+            // 调试: 检查 HTML 长度和关键标记
+            console.log(`[ScraperService] HTML 长度: ${html.length}`)
+            console.log(
+              `[ScraperService] 包含 rich_media_content: ${html.includes('rich_media_content')}`
+            )
+            console.log(`[ScraperService] 包含 js_content: ${html.includes('js_content')}`)
+
+            // 调试: 保存 HTML 到临时文件分析
+            const debugHtmlPath = path.join(app.getPath('temp'), 'wx_debug.html')
+            fs.writeFileSync(debugHtmlPath, html)
+            console.log(`[ScraperService] HTML 已保存到: ${debugHtmlPath}`)
+
             const parsed = parseArticleContent(html)
+
+            // 调试: 检查解析结果
+            console.log(`[ScraperService] Markdown 长度: ${parsed.markdown.length}`)
+            console.log(`[ScraperService] 图片数量: ${parsed.images.length}`)
 
             // 检查存储配置,决定是否下载图片到本地
             const storageConfig = await prisma.config.findUnique({ where: { key: 'storage' } })

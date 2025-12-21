@@ -160,9 +160,9 @@ const pagination = reactive({
 })
 
 // 格式化日期
-const formatDate = (dateString: string | null): string => {
-  if (!dateString) return '-'
-  const date = new Date(dateString)
+const formatDate = (dateValue: string | Date | null): string => {
+  if (!dateValue) return '-'
+  const date = dateValue instanceof Date ? dateValue : new Date(dateValue)
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
